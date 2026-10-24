@@ -179,7 +179,7 @@ footer { margin-top:30px; font-size:12px; color:var(--muted); }
     if (!parsed) { say('В файле нет листа «Ответы». Загрузите тот же файл, с которым работали (Данные_1_… или Данные_2_…).', true); return; }
     const filled = Object.values(parsed.answers).filter((v) => v !== '' && v !== null).length;
     if (!filled) { say('Лист «Ответы» пустой. Впишите ответы в жёлтые ячейки и сохраните файл.', true); return; }
-    if (!URL_) { say('Страница ещё не подключена к таблице проверки (config.js). Сообщите ведущему.', true); return; }
+    if (!URL_) { say('Страница ещё не подключена к таблице проверки (config.js). Сообщите методисту.', true); return; }
     say('Отправляю на проверку… (' + filled + ' ответов)');
     try {
       const res = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -207,7 +207,7 @@ footer { margin-top:30px; font-size:12px; color:var(--muted); }
       </div>
       <div class="items">${items}</div>
       ${warn.length ? '<div class="note" style="color:#FF8A8F">Обратите внимание: ' + warn.join('; ') + '. Можно исправить и загрузить файл ещё раз.</div>' : ''}
-      <div class="note" style="color:#BDBDBD">✗ — исправьте в файле и загрузите снова: засчитывается последняя попытка. ⏳ — проверит ведущий.</div>`;
+      <div class="note" style="color:#BDBDBD">✗ — исправьте в файле и загрузите снова: засчитывается последняя попытка. ⏳ — проверит методист.</div>`;
     $('result').scrollIntoView({ behavior: 'smooth' });
   }
 
