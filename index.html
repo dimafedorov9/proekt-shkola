@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Проверка практики · МРЦ «Ноосферум»</title>
+<link rel="icon" href="assets/logo.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="config.js"></script>
+<style>
+:root { --red:#D71920; --black:#1A1A1A; --gray:#5C5C5C; --muted:#9A9A9A; --card:#F3F3F3; --pink:#FBE8E9; --line:#D9D9D9; --bg:#FFFFFF; --ok:#1E8E3E; }
+* { box-sizing:border-box; }
+body { margin:0; font-family:Montserrat, Arial, sans-serif; color:var(--black); background:var(--bg); }
+.wrap { max-width:880px; margin:0 auto; padding:24px 16px 64px; position:relative; }
+.arcs { position:fixed; right:-220px; top:-220px; width:560px; height:560px; border-radius:50%; border:1.5px solid #E6E6E6; pointer-events:none; }
+.arcs::after { content:""; position:absolute; inset:70px; border-radius:50%; border:1.5px solid #EDEDED; }
+header { display:flex; align-items:center; gap:16px; margin-bottom:28px; }
+header img { width:64px; height:64px; }
+.crumb { color:var(--red); font-weight:700; font-size:12px; letter-spacing:.06em; text-transform:uppercase; }
+h1 { font-size:28px; margin:4px 0 0; font-weight:800; text-transform:uppercase; letter-spacing:.01em; }
+.step { background:var(--card); border-radius:14px; padding:20px 22px; margin-bottom:16px; }
+.step h2 { margin:0 0 12px; font-size:16px; display:flex; align-items:center; gap:10px; }
+.num { width:30px; height:30px; border-radius:50%; background:var(--red); color:#fff; display:inline-grid; place-items:center; font-size:14px; flex:none; }
+.row { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+@media (max-width:640px){ .row { grid-template-columns:1fr; } h1 { font-size:22px; } }
+label { font-size:12px; color:var(--gray); display:block; margin-bottom:4px; }
+input[type=text] { width:100%; padding:12px 14px; font:inherit; font-size:15px; border:1.5px solid var(--line); border-radius:10px; background:#fff; }
+input[type=text]:focus { outline:none; border-color:var(--red); }
+.drop { border:2px dashed #C8C8C8; border-radius:14px; background:#fff; padding:34px 16px; text-align:center; cursor:pointer; transition:.15s; }
+.drop.over { border-color:var(--red); background:var(--pink); }
+.drop b { display:block; font-size:17px; margin-bottom:6px; }
+.drop span { color:var(--gray); font-size:13px; }
+.btn { background:var(--red); color:#fff; border:0; border-radius:10px; padding:12px 18px; font:inherit; font-weight:700; cursor:pointer; }
+.btn.dark { background:var(--black); }
+.btn:disabled { opacity:.5; cursor:default; }
+.msg { margin-top:12px; font-size:14px; }
+.err { color:var(--red); font-weight:600; }
+.result { background:var(--black); color:#fff; border-radius:14px; padding:22px; margin-bottom:16px; display:none; }
+.result .big { font-size:42px; font-weight:800; }
+.result .code { display:inline-block; background:var(--red); padding:6px 12px; border-radius:8px; font-weight:800; font-size:20px; letter-spacing:.08em; }
+.items { display:grid; grid-template-columns:repeat(auto-fill,minmax(118px,1fr)); gap:8px; margin-top:16px; }
+.it { background:#2A2A2A; border-radius:8px; padding:8px 10px; font-size:13px; }
+.it.ok b { color:#7BD88F; } .it.no b { color:#FF8A8F; } .it.wait b { color:#C8C8C8; }
+.it small { display:block; color:#BDBDBD; font-size:11px; margin-top:2px; }
+.note { font-size:12px; color:var(--muted); margin-top:8px; }
+.found { margin-top:10px; font-size:14px; }
+footer { margin-top:30px; font-size:12px; color:var(--muted); }
+</style>
+</head>
+<body>
+<div class="arcs"></div>
+<div class="wrap">
+  <header>
+    <img src="assets/logo.png" alt="">
+    <div>
+      <div class="crumb">Проектная школа МРЦ · 27 октября 2026</div>
+      <h1>Проверка практической работы</h1>
+    </div>
+  </header>
+
+  <div class="step">
+    <h2><span class="num">1</span>Кто сдаёт работу</h2>
+    <div class="row">
+      <div><label for="fio">Фамилия и имя</label><input id="fio" type="text" placeholder="Иванова Анна" autocomplete="name"></div>
+      <div><label for="school">Школа</label><input id="school" type="text" placeholder="МБОУ Криводановская СШ № 1"></div>
+    </div>
+  </div>
+
+  <div class="step">
+    <h2><span class="num">2</span>Перетащите сохранённый файл с листом «Ответы»</h2>
+    <div class="drop" id="drop">
+      <b>Перетащите файл сюда</b>
+      <span>или нажмите, чтобы выбрать · Данные_1_Редис… или Данные_2_Пшеница… (.xlsx)</span>
+      <input id="file" type="file" accept=".xlsx" hidden>
+    </div>
+    <div class="msg" id="msg"></div>
+  </div>
+
+  <div class="result" id="result"></div>
+
+  <div class="step">
+    <h2><span class="num">3</span>Итог после проверки графиков</h2>
+    <div class="row">
+      <div><label for="code">Код работы (выдан после загрузки)</label><input id="code" type="text" placeholder="например, 48213" inputmode="numeric"></div>
+      <div style="display:flex;align-items:flex-end"><button class="btn dark" id="checkBtn">Узнать итог</button></div>
+    </div>
+    <div class="found" id="found"></div>
+  </div>
+
+  <footer>МРЦ «Ноосферум» · МАОУ «Гимназия «Краснообская» · proekt@мрц-ноосферум.рф</footer>
+</div>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const URL_ = (window.SCRIPT_URL || '').trim();
+  const store = { get(k) { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+  $('fio').value = store.get('fio'); $('school').value = store.get('school'); $('code').value = store.get('code');
+  ['fio', 'school'].forEach(id => $(id).addEventListener('input', () => store.set(id, $(id).value.trim())));
+  const MANUAL_NAMES = { 'Б4': 'График Б4', 'С6': 'График С6', 'П2': 'Скриншот П2', 'П5б': 'Объяснение П5' };
+
+  const drop = $('drop'), fileInp = $('file');
+  drop.addEventListener('click', () => fileInp.click());
+  drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+  drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+  drop.addEventListener('drop', (e) => { e.preventDefault(); drop.classList.remove('over'); if (e.dataTransfer.files[0]) handle(e.dataTransfer.files[0]); });
+  fileInp.addEventListener('change', () => { if (fileInp.files[0]) handle(fileInp.files[0]); fileInp.value = ''; });
+
+  function say(html, err) { $('msg').innerHTML = err ? '<span class="err">' + html + '</span>' : html; }
+
+  // ---------- read answers ----------
+  function readAnswers(wb) {
+    const ws = wb.Sheets['Ответы'];
+    if (!ws) return null;
+    const marker = (ws['H1'] && ws['H1'].v) || '';
+    const level = /PRACTICE-2/.test(marker) ? 2 : /PRACTICE-1/.test(marker) ? 1 : (wb.Sheets['Пробы'] ? 2 : 1);
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: true, defval: '' });
+    const answers = {};
+    rows.forEach((r) => {
+      const id = String(r[0] || '').trim();
+      if (/^[БСП]\d[а-я]?$/.test(id)) {
+        let v = r[2];
+        if (typeof v === 'string') v = v.trim();
+        if (v === '—') v = '';
+        answers[id] = v;
+      }
+    });
+    return { level, answers };
+  }
+
+  // ---------- describe charts, pivots, images for the reviewer ----------
+  async function analyzeZip(buf) {
+    const zip = await JSZip.loadAsync(buf);
+    const files = Object.keys(zip.files);
+    const charts = files.filter((f) => /^xl\/charts\/chart\d+\.xml$/.test(f)).sort();
+    const parts = [];
+    for (const f of charts) {
+      const x = (await zip.file(f).async('string')).replace(/<(\/?)[A-Za-z0-9]+:/g, '<$1');
+      const type = (x.match(/<(bar|line|scatter|pie|area|doughnut|radar|bubble)Chart>/) || [])[1] || '?';
+      const dir = (x.match(/<barDir val="(\w+)"/) || [])[1];
+      const titles = (x.match(/<title>/g) || []).length;
+      const autoDel = /<autoTitleDeleted val="(1|true)"/.test(x);
+      const valAx = x.split('<valAx>')[1] || '';
+      const min = (valAx.match(/<min val="([\d.\-E]+)"/) || [])[1];
+      const nSer = (x.match(/<ser>/g) || []).length;
+      const name = { bar: dir === 'bar' ? 'линейчатая' : 'столбцы', line: 'линия', scatter: 'точечная', pie: 'круговая', area: 'с областями' }[type] || type;
+      const axTitles = (x.split('<plotArea>')[1] || '').match(/<title>/g) || [];
+      const chartTitle = titles - axTitles.length > 0 && !autoDel;
+      parts.push(`${name}, рядов: ${nSer}, заголовок: ${chartTitle ? 'есть' : 'нет'}, подписи осей: ${axTitles.length}, мин. оси Y: ${min === undefined ? 'авто' : min}`);
+    }
+    const ex = files.filter((f) => /^xl\/chartsEx\/chartEx\d+\.xml$/.test(f)).length;
+    if (ex) parts.push(`статистических диаграмм (гистограмма/ящик): ${ex}`);
+    const pivots = files.filter((f) => /^xl\/pivotTables\/pivotTable\d+\.xml$/.test(f)).length;
+    const imgs = files.filter((f) => /^xl\/media\//.test(f)).length;
+    return { text: (parts.length ? parts.map((p, i) => `#${i + 1}: ${p}`).join(' | ') : 'диаграмм нет') + ` | сводных таблиц: ${pivots} | картинок: ${imgs}`, pivots, charts: charts.length + ex, imgs };
+  }
+
+  function b64(buf) {
+    let s = ''; const b = new Uint8Array(buf);
+    for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+    return btoa(s);
+  }
+
+  async function handle(file) {
+    const fio = $('fio').value.trim(), school = $('school').value.trim();
+    if (!fio || !school) { say('Сначала впишите фамилию, имя и школу — в шаге 1.', true); $('fio').focus(); return; }
+    if (!/\.xlsx$/i.test(file.name)) { say('Нужен файл Excel (.xlsx). Если работали в Google или Яндекс Таблицах — скачайте его как .xlsx.', true); return; }
+    say('Читаю файл…');
+    let buf, wb, parsed, info;
+    try {
+      buf = await file.arrayBuffer();
+      wb = XLSX.read(buf, { type: 'array' });
+      parsed = readAnswers(wb);
+      info = await analyzeZip(buf);
+    } catch (e) { say('Не получилось прочитать файл. Сохраните его в Excel ещё раз и попробуйте снова.', true); return; }
+    if (!parsed) { say('В файле нет листа «Ответы». Загрузите тот же файл, с которым работали (Данные_1_… или Данные_2_…).', true); return; }
+    const filled = Object.values(parsed.answers).filter((v) => v !== '' && v !== null).length;
+    if (!filled) { say('Лист «Ответы» пустой. Впишите ответы в жёлтые ячейки и сохраните файл.', true); return; }
+    if (!URL_) { say('Страница ещё не подключена к таблице проверки (config.js). Сообщите ведущему.', true); return; }
+    say('Отправляю на проверку… (' + filled + ' ответов)');
+    try {
+      const res = await fetch(URL_, { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ fio, school, level: parsed.level, answers: parsed.answers, charts: info.text, fileName: file.name, fileB64: b64(buf) }) });
+      const data = await res.json();
+      if (!data.ok) throw new Error(data.error || 'ошибка сервера');
+      show(data, info);
+      say('');
+    } catch (e) { say('Не удалось отправить: ' + e.message + '. Проверьте интернет и попробуйте ещё раз.', true); }
+  }
+
+  function show(d, info) {
+    store.set('code', d.code); $('code').value = d.code;
+    const man = Object.keys(d.manual || {});
+    const items = d.items.map((it) => `<div class="it ${it.ok ? 'ok' : 'no'}"><b>${it.ok ? '✓' : '✗'} ${it.id}</b>${it.note ? '<small>' + it.note + '</small>' : ''}</div>`).join('')
+      + man.map((m) => `<div class="it wait"><b>⏳ ${m}</b><small>${MANUAL_NAMES[m]} · до ${d.manual[m]} б.</small></div>`).join('');
+    const warn = [];
+    if (man.includes('Б4') || man.includes('С6')) { if (!info.charts) warn.push('в файле не найдено ни одной диаграммы'); }
+    if (man.includes('П2') && !info.imgs) warn.push('на листе нет скриншота для П2');
+    $('result').style.display = 'block';
+    $('result').innerHTML = `<div class="crumb" style="color:#FF8A8F">Работа принята · ${d.levelName}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-end;margin-top:8px">
+        <div><div class="big">${d.auto} / ${d.autoMax}</div><div style="color:#C8C8C8;font-size:13px">автопроверка</div></div>
+        <div><div class="code">${d.code}</div><div style="color:#C8C8C8;font-size:13px;margin-top:6px">код работы — по нему итог в шаге 3</div></div>
+      </div>
+      <div class="items">${items}</div>
+      ${warn.length ? '<div class="note" style="color:#FF8A8F">Обратите внимание: ' + warn.join('; ') + '. Можно исправить и загрузить файл ещё раз.</div>' : ''}
+      <div class="note" style="color:#BDBDBD">✗ — исправьте в файле и загрузите снова: засчитывается последняя попытка. ⏳ — проверит ведущий.</div>`;
+    $('result').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  $('checkBtn').addEventListener('click', async () => {
+    const code = $('code').value.trim();
+    if (!code) { $('found').innerHTML = '<span class="err">Введите код работы.</span>'; return; }
+    if (!URL_) { $('found').innerHTML = '<span class="err">Страница не подключена к таблице проверки.</span>'; return; }
+    $('found').textContent = 'Ищу…';
+    try {
+      const d = await (await fetch(URL_ + '?code=' + encodeURIComponent(code))).json();
+      if (!d.found) { $('found').innerHTML = '<span class="err">Работа с таким кодом не найдена.</span>'; return; }
+      const man = Object.entries(d.manual).filter(([, v]) => v !== '—').map(([k, v]) => `${k}: ${v === '' ? 'ещё не проверено' : v + ' б.'}`).join(' · ');
+      $('found').innerHTML = `<b>${d.fio}</b> · ${d.level}<br>Автопроверка: <b>${d.auto} из ${d.autoMax}</b>${man ? '<br>' + man : ''}<br>Итого: <b style="color:var(--red)">${typeof d.total === 'number' ? d.total + ' из ' + d.max : d.total}</b>`;
+    } catch (e) { $('found').innerHTML = '<span class="err">Не удалось связаться с таблицей проверки.</span>'; }
+  });
+})();
+</script>
+</body>
+</html>
